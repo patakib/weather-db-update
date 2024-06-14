@@ -1,0 +1,15 @@
+cities:
+  - name: Sopron
+    coordinates: [47.685, 16.5905]
+    email: true
+  - name: Ravazd
+    coordinates: [47.5142, 17.7536]
+    email: true
+  - name: Budapest
+    coordinates: [47.4984, 19.0404]
+  - name: Puchberg
+    coordinates: [47.7871, 15.9135]
+  - name: Balatonfüred
+    coordinates: [46.9619, 17.8719]
+  - name: Vienna
+    coordinates: [48.2085, 16.3721]
