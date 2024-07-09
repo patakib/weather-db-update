@@ -32,7 +32,7 @@ type HourlyWeather struct {
 	PrecipitationProbability_percent []int32   `json:"precipitation_probability"`
 	Precipitation_mm                 []float32 `json:"precipitation"`
 	Rain_mm                          []float32 `json:"rain"`
-	Snow_mm                          []float32 `json:"snowfall"`
+	Snow_cm                          []float32 `json:"snowfall"`
 	WeatherCode                      []int32   `json:"weather_code"`
 	CloudCover_percent               []int32   `json:"cloud_cover"`
 	WindSpeed10m                     []float32 `json:"wind_speed_10m"`
