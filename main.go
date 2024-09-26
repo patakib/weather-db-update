@@ -98,6 +98,14 @@ func writeDataToDb(response t.Response, pgPort, pgHost, pgDatabase, pgUser, pgPa
 	if _, err := db.Exec(createTableDaily); err != nil {
 		log.Fatal(err)
 	}
+
+	if _, err := db.Exec(`DELETE FROM weather_hourly_forecast WHERE city IS NOT NULL;`); err != nil {
+		log.Fatal(err)
+	}
+	if _, err := db.Exec(`DELETE FROM weather_daily_forecast WHERE city IS NOT NULL;`); err != nil {
+		log.Fatal(err)
+	}
+
 	for index, _ := range response.Hourly.Time {
 		insertIntoHourly := `
 			INSERT INTO weather_hourly_forecast (
