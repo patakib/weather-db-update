@@ -16,17 +16,27 @@ import (
 	t "weather-db-update/types"
 )
 
+var infoLogger *log.Logger
+var errorLogger *log.Logger
+
+func init() {
+	infoLogger = log.New(os.Stdout, "Wweather-db-update - INFO: ", log.LstdFlags|log.Lshortfile)
+	errorLogger = log.New(os.Stdout, "weather-db-update - ERROR: ", log.LstdFlags|log.Lshortfile)
+}
+
 func readConfig(file string) (t.Config, error) {
 	// read config file and returns the config
 	f, err := os.ReadFile(file)
 	if err != nil {
-		log.Fatal(err)
+		errorLogger.Fatalf("Cannot read config: %v", err)
 	}
+	infoLogger.Println("Config file successfully read.")
 	var config t.Config
 	err = yaml.Unmarshal(f, &config)
 	if err != nil {
-		log.Fatal(err)
+		errorLogger.Fatalf("Cannot unmarshal config data: %v", err)
 	}
+	infoLogger.Println("YAML data has been successfully unmarshalled.")
 	return config, err
 }
 
@@ -36,14 +46,18 @@ func getMeteoData(coordinates []float64) (t.Response, error) {
 	url := fmt.Sprintf("https://api.open-meteo.com/v1/forecast?latitude=%v&longitude=%v&hourly=temperature_2m,precipitation_probability,precipitation,rain,snowfall,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_sum,rain_sum,snowfall_sum,precipitation_hours,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant&timezone=auto&forecast_days=16", coordinates[0], coordinates[1])
 	res, err := http.Get(url)
 	if err != nil {
-		log.Fatal(err)
+		errorLogger.Fatalf("Cannot get meteo data from path: %v\n, %v", url, err)
 	}
 	responseData, err := io.ReadAll(res.Body)
 	if err != nil {
-		log.Fatal(err)
+		errorLogger.Fatalf("Cannot read HTTP Response from meteo API: %v", err)
 	}
 	var responseObject t.Response
-	json.Unmarshal(responseData, &responseObject)
+	err = json.Unmarshal(responseData, &responseObject)
+	if err != nil {
+		errorLogger.Fatalf("Cannot unmarshal REST API data: %v\n, %v", responseData, err)
+	}
+	infoLogger.Println("Meteo data has been successfully extracted.")
 	return responseObject, err
 }
 
@@ -53,12 +67,12 @@ func writeDataToDb(response t.Response, pgPort, pgHost, pgDatabase, pgUser, pgPa
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", pgHost, pgPort, pgUser, pgPass, pgDatabase)
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		log.Fatal(err)
+		errorLogger.Fatal(err)
 	}
 	defer db.Close()
 	err = db.Ping()
 	if err != nil {
-		log.Fatal(err)
+		errorLogger.Fatal(err)
 	}
 	createTableHourly := `
 		CREATE TABLE IF NOT EXISTS weather_hourly_forecast (
@@ -76,7 +90,7 @@ func writeDataToDb(response t.Response, pgPort, pgHost, pgDatabase, pgUser, pgPa
 			winddir_10m INTEGER
 		);`
 	if _, err := db.Exec(createTableHourly); err != nil {
-		log.Fatal(err)
+		errorLogger.Fatal(err)
 	}
 	createTableDaily := `
 		CREATE TABLE IF NOT EXISTS weather_daily_forecast (
@@ -96,14 +110,14 @@ func writeDataToDb(response t.Response, pgPort, pgHost, pgDatabase, pgUser, pgPa
 			winddirection_10m_dominant INTEGER
 		);`
 	if _, err := db.Exec(createTableDaily); err != nil {
-		log.Fatal(err)
+		errorLogger.Fatal(err)
 	}
 
 	if _, err := db.Exec(`DELETE FROM weather_hourly_forecast WHERE city IS NOT NULL;`); err != nil {
-		log.Fatal(err)
+		errorLogger.Fatal(err)
 	}
 	if _, err := db.Exec(`DELETE FROM weather_daily_forecast WHERE city IS NOT NULL;`); err != nil {
-		log.Fatal(err)
+		errorLogger.Fatal(err)
 	}
 
 	for index, _ := range response.Hourly.Time {
@@ -136,7 +150,7 @@ func writeDataToDb(response t.Response, pgPort, pgHost, pgDatabase, pgUser, pgPa
 			response.Hourly.WindSpeed10m[index],
 			response.Hourly.WindDirection10m[index],
 		); err != nil {
-			log.Fatal(err)
+			errorLogger.Fatal(err)
 		}
 	}
 	for index, _ := range response.Daily.Time {
@@ -173,7 +187,7 @@ func writeDataToDb(response t.Response, pgPort, pgHost, pgDatabase, pgUser, pgPa
 			response.Daily.WindSpeed10mMax[index],
 			response.Daily.WindDirection10mDominant[index],
 		); err != nil {
-			log.Fatal(err)
+			errorLogger.Fatal(err)
 		}
 	}
 	fmt.Println("Data has been successfully written to Database.")
@@ -182,11 +196,11 @@ func writeDataToDb(response t.Response, pgPort, pgHost, pgDatabase, pgUser, pgPa
 func main() {
 	config, err := readConfig("config.yaml")
 	if err != nil {
-		log.Fatal(err)
+		errorLogger.Fatal(err)
 	}
 	err2 := godotenv.Load(".env.secret")
 	if err2 != nil {
-		log.Fatal()
+		errorLogger.Fatal()
 	}
 	db_user := os.Getenv("POSTGRES_USER")
 	db_pass := os.Getenv("POSTGRES_PASSWORD")
@@ -197,7 +211,7 @@ func main() {
 	for i, city := range config.Cities {
 		res, err := getMeteoData(config.Cities[i].Coordinates)
 		if err != nil {
-			log.Fatal(err)
+			errorLogger.Fatal(err)
 		}
 		writeDataToDb(res, db_port, db_host, db_database, db_user, db_pass, city.Name)
 	}
