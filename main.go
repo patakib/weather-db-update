@@ -61,6 +61,26 @@ func getMeteoData(coordinates []float64) (t.Response, error) {
 	return responseObject, err
 }
 
+func clearDataFromDb(pgPort, pgHost, pgDatabase, pgUser, pgPass string) {
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", pgHost, pgPort, pgUser, pgPass, pgDatabase)
+	db, err := sql.Open("postgres", psqlInfo)
+	if err != nil {
+		errorLogger.Fatal(err)
+	}
+	defer db.Close()
+	err = db.Ping()
+	if err != nil {
+		errorLogger.Fatal(err)
+	}
+
+	if _, err := db.Exec(`DELETE FROM weather_hourly_forecast WHERE city IS NOT NULL;`); err != nil {
+		errorLogger.Fatal(err)
+	}
+	if _, err := db.Exec(`DELETE FROM weather_daily_forecast WHERE city IS NOT NULL;`); err != nil {
+		errorLogger.Fatal(err)
+	}
+}
+
 func writeDataToDb(response t.Response, pgPort, pgHost, pgDatabase, pgUser, pgPass, city string) {
 	//connects to database and insert data from response struct into db
 
@@ -110,13 +130,6 @@ func writeDataToDb(response t.Response, pgPort, pgHost, pgDatabase, pgUser, pgPa
 			winddirection_10m_dominant INTEGER
 		);`
 	if _, err := db.Exec(createTableDaily); err != nil {
-		errorLogger.Fatal(err)
-	}
-
-	if _, err := db.Exec(`DELETE FROM weather_hourly_forecast WHERE city IS NOT NULL;`); err != nil {
-		errorLogger.Fatal(err)
-	}
-	if _, err := db.Exec(`DELETE FROM weather_daily_forecast WHERE city IS NOT NULL;`); err != nil {
 		errorLogger.Fatal(err)
 	}
 
@@ -207,6 +220,8 @@ func main() {
 	db_host := os.Getenv("POSTGRES_HOST")
 	db_port := os.Getenv("POSTGRES_PORT")
 	db_database := os.Getenv("POSTGRES_DB")
+
+	clearDataFromDb(db_port, db_host, db_database, db_user, db_pass)
 
 	for i, city := range config.Cities {
 		res, err := getMeteoData(config.Cities[i].Coordinates)
