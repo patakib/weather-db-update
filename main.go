@@ -20,7 +20,7 @@ var infoLogger *log.Logger
 var errorLogger *log.Logger
 
 func init() {
-	infoLogger = log.New(os.Stdout, "Wweather-db-update - INFO: ", log.LstdFlags|log.Lshortfile)
+	infoLogger = log.New(os.Stdout, "weather-db-update - INFO: ", log.LstdFlags|log.Lshortfile)
 	errorLogger = log.New(os.Stdout, "weather-db-update - ERROR: ", log.LstdFlags|log.Lshortfile)
 }
 
@@ -211,9 +211,9 @@ func main() {
 	if err != nil {
 		errorLogger.Fatal(err)
 	}
-	err2 := godotenv.Load(".env.secret")
+    err2 := godotenv.Load(".env.secret")
 	if err2 != nil {
-		errorLogger.Fatal()
+    	errorLogger.Fatal()
 	}
 	db_user := os.Getenv("POSTGRES_USER")
 	db_pass := os.Getenv("POSTGRES_PASSWORD")

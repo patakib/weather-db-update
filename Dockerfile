@@ -3,6 +3,9 @@ RUN mkdir /app
 ADD . /app
 WORKDIR /app
 RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux go build -o weather-db-update .
-RUN chmod +x weather-db-update
-CMD ["weather-db-update"]
+ENV POSTGRES_USER=
+ENV POSTGRES_PASSWORD=
+ENV POSTGRES_HOST=
+ENV POSTGRES_PORT=
+ENV POSTGRES_DB=
+CMD ["go run app/main.go"]
