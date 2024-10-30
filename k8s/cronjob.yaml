@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: weather-db-update
+  namespace: weather
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          imagePullSecrets:
+            - name: regcred
+          containers:
+          - name: weather-db-update
+            image: patakib/weather-db-update-arm64:0.1.0
+            imagePullPolicy: Always
+            env:
+              - name: POSTGRES_HOST
+                value: "10.43.1.1"
+              - name: POSTGRES_PORT
+                value: "30431"
+              - name: POSTGRES_USER
+                valueFrom:
+                  secretKeyRef:
+                    name: weather-postgres-user
+                    key: POSTGRES_USER
+              - name: POSTGRES_DB
+                valueFrom:
+                  secretKeyRef:
+                    name: weather-postgres-db
+                    key: POSTGRES_DB
+              - name: POSTGRES_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: weather-postgres-password
+                    key: POSTGRES_PASSWORD
+          restartPolicy: Never
+      backoffLimit: 1
